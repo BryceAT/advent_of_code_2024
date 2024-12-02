@@ -58,8 +58,23 @@ fn day1() -> Result<(), Box<dyn Error>> {
     println!("part 2: {:?}", ans2);
     Ok(())
 }
+fn day2() -> Result<(), Box<dyn Error>> {
+    fn is_safe(v:&[i32]) -> bool {
+        v.windows(2).map(|x| x[0]-x[1]).all(|y| y==1 || y==2 || y==3) ||
+        v.windows(2).map(|x| x[0]-x[1]).all(|y| y==-1 || y==-2 || y==-3)
+    }
+    let text = get_text(2,false,1)?;
+    let ans1:i32 = text.split('\n').map(|line| if is_safe(&line.split_whitespace().filter_map(|x| x.parse::<i32>().ok()).collect::<Vec<i32>>()) {1} else {0}).sum();
+    println!("part1: {:?}", ans1);
+    fn is_safe2(v:&[i32]) -> bool {
+        is_safe(v) || (0..v.len()).any(|i| is_safe(&v[..i].iter().chain(v[i+1..].iter()).map(|x| *x).collect::<Vec<i32>>()))
+    }
+    let ans2:i32 = text.split('\n').map(|line| if is_safe2(&line.split_whitespace().filter_map(|x| x.parse::<i32>().ok()).collect::<Vec<i32>>()) {1} else {0}).sum();
+    println!("part2: {:?}", ans2);
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day1();
+    let _ = day2();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
