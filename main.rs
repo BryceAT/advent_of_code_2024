@@ -73,8 +73,44 @@ fn day2() -> Result<(), Box<dyn Error>> {
     println!("part2: {:?}", ans2);
     Ok(())
 }
+fn day3() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(3,false,1)?;
+    let re = Regex::new(r"mul\((?<a>[0-9]{1,3}),(?<b>[0-9]{1,3})\)").unwrap();
+    fn sum_up(text:String, re: Regex) -> i64 {
+        re.captures_iter(&text).map(|caps| {
+            let a: i64 = caps["a"].parse().unwrap();
+            let b: i64 = caps["b"].parse().unwrap();
+            a*b
+        }).sum()
+    }
+    let ans1:i64 = sum_up(text, re.clone());
+    println!("part1: {:?}", ans1);
+    let mut text: String = get_text(3,false,1)?;
+    let mut ans2:i64 = 0;
+    while !text.is_empty() {
+        match (text.rfind(r"do()"),text.rfind(r"don't()")) {
+            (Some(x),Some(y)) if x < y => {
+                text = text[..y].to_string();
+            },
+            (Some(x),Some(_)) => {
+                ans2 += sum_up(text[x..].to_string(),re.clone());
+                text = text[..x].to_string();
+            },
+            (_,Some(y)) => {
+                text = text[..y].to_string();
+            },
+            _ => {
+                ans2 += sum_up(text.clone(),re.clone());
+                text.clear();
+            }
+        }
+        //println!("{ans2} {text:?}");
+    }
+    println!("part2: {:?}", ans2);
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day2();
+    let _ = day3();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
