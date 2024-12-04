@@ -109,8 +109,49 @@ fn day3() -> Result<(), Box<dyn Error>> {
     println!("part2: {:?}", ans2);
     Ok(())
 }
+fn day4() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(4,false,1)?;
+    let mut grid = text.split('\n').map(|row| row.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
+    fn look(i:usize, j: usize, word: &[char], grid: &mut [Vec<char>], tot: &mut i64) {
+        let len = word.len() - 1;
+        if i+len < grid.len() && j.wrapping_sub(len) < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i+d][j.wrapping_sub(d)]) {*tot += 1}
+        if i+len < grid.len() && (0..word.len()).all(|d| word[d] == grid[i+d][j]) {*tot += 1}
+        if i+len < grid.len() && j + len < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i+d][j+d]) {*tot += 1}
+        if j.wrapping_sub(len) < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i][j.wrapping_sub(d)]) {*tot += 1}
+        if j + len < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i][j+d]) {*tot += 1}
+        if i.wrapping_sub(len) < grid.len() && j.wrapping_sub(len) < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i.wrapping_sub(d)][j.wrapping_sub(d)]) {*tot += 1}
+        if i.wrapping_sub(len) < grid.len() && (0..word.len()).all(|d| word[d] == grid[i.wrapping_sub(d)][j]) {*tot += 1}
+        if i.wrapping_sub(len) < grid.len() && j + len < grid[0].len() && (0..word.len()).all(|d| word[d] == grid[i.wrapping_sub(d)][j+d]) {*tot += 1}
+    }
+    let mut tot = 0;
+    let word: Vec<char> = "XMAS".chars().collect();
+    for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            if grid[i][j] == 'X' {
+                look(i,j, &word, &mut grid, &mut tot);
+            }
+        }
+    }
+    println!("part 1: {tot}"); 
+    let mut tot2 = 0;
+    for i in 1..grid.len()-1 {
+        for j in 1..grid[0].len()-1 {
+            if grid[i][j] == 'A' {
+                match (grid[i-1][j-1],grid[i+1][j+1],grid[i+1][j-1],grid[i-1][j+1]) {
+                    ('M','S','M','S') => tot2 += 1,
+                    ('M','S','S','M') => tot2 += 1,
+                    ('S','M','M','S') => tot2 += 1,
+                    ('S','M','S','M') => tot2 += 1,
+                    _ => ()
+                }
+            }
+        }
+    }
+    println!("part 2: {tot2}");
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day3();
+    let _ = day4();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
