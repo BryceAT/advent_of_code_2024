@@ -150,8 +150,59 @@ fn day4() -> Result<(), Box<dyn Error>> {
     println!("part 2: {tot2}");
     Ok(())
 }
+fn day5() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(5,false,1)?;
+    let mut lines = text.split('\n');
+    let mut rules = HashMap::new();
+    while let Some(line) = lines.next() {
+        let nums:Vec<i64> = line.split('|').filter_map(|x| x.parse::<i64>().ok()).collect();
+        match &nums[..] {
+            &[a,b] => {rules.entry(a).and_modify(|set: &mut HashSet<i64>| {set.insert(b);}).or_insert(HashSet::from([b]));},
+            _ => break
+        }
+    }
+    let mut pages = Vec::new();
+    while let Some(line) = lines.next() {
+        let nums:Vec<i64> = line.split(',').filter_map(|x| x.parse::<i64>().ok()).collect();
+        pages.push(nums);
+    }
+    fn follows_rules(s: &[i64], rules: &HashMap<i64,HashSet<i64>>) -> bool {
+        let mut seen = HashSet::new();
+        for x in s {
+            if let Some(set) = rules.get(x) {
+                if seen.iter().any(|y| set.contains(y)) {
+                    return false
+                }
+            }
+            seen.insert(*x);
+        }
+        true
+    }
+    let ans1:i64 = pages.iter().filter_map(|s| if follows_rules(s,&rules) {Some(s[s.len()/2])} else {None}).sum();
+    println!("part 1: {ans1}");
+    fn sort_and_mid(s: &[i64], rules: &HashMap<i64, HashSet<i64>>) -> Option<i64> {
+        let mut rel = HashMap::new();
+        for &x in s {
+            rel.insert(x, rules.get(&x).unwrap_or(&HashSet::new()).iter().filter_map(|y| if s.contains(y) {Some(*y)} else {None}).collect::<HashSet<i64>>());
+        }
+        let mut ordered = Vec::new();
+        let mut ready: Vec<i64> = s.iter().filter_map(|x| if rel[x].len() == 0 {Some(*x)} else {None}).collect();
+        while let Some(x) = ready.pop() {
+            ordered.push(x);
+            for (y,set) in rel.iter_mut() {
+                if set.remove(&x) && set.len() == 0 {
+                    ready.push(*y);
+                } 
+            }
+        }
+        Some(ordered[ordered.len() / 2])
+    }
+    let ans2:i64 = pages.iter().filter_map(|s| if follows_rules(s,&rules) {None} else {sort_and_mid(s,&rules)}).sum();
+    println!("part 2: {ans2}");
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day4();
+    let _ = day5();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
