@@ -201,8 +201,137 @@ fn day5() -> Result<(), Box<dyn Error>> {
     println!("part 2: {ans2}");
     Ok(())
 }
+fn day6() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(6,false,1)?;
+    let mut grid = text.split('\n').map(|row| row.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
+    let orig_grid = grid.clone();
+    let mut x = 0; let mut y = 0;
+    'outer: for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            match grid[i][j] {
+                '.'|'#' => (),
+                '^'|'>'|'v'|'<' => {x = i; y=j; break 'outer},
+                x => unreachable!("{x} should not be in the map"), 
+            }
+        }
+    }
+    let orig_x = x; let orig_y = y;
+    fn go_step(x: &mut usize, y: &mut usize, grid: &mut [Vec<char>]) -> bool {
+        //for row in grid.iter() {println!("{row:?}");} println!("\n");
+        match grid[*x][*y] {
+            '^' => {
+                if *x == 0 {grid[*x][*y] = 'X';return true}
+                if grid[*x-1][*y] == '#' {
+                    grid[*x][*y] = '>';
+                } else {
+                    grid[*x][*y] = 'X';
+                    *x -= 1;
+                    grid[*x][*y] = '^';
+                }
+            },
+            '>' =>{
+                if *y == grid[0].len() -1 {grid[*x][*y] = 'X';return true}
+                if grid[*x][*y+1] == '#' {
+                    grid[*x][*y] = 'v';
+                } else {
+                    grid[*x][*y] = 'X';
+                    *y += 1;
+                    grid[*x][*y] = '>';
+                }
+            },
+            'v' =>{
+                if *x == grid.len()-1 {grid[*x][*y] = 'X'; return true}
+                if grid[*x+1][*y] == '#' {
+                    grid[*x][*y] = '<';
+                } else {
+                    grid[*x][*y] = 'X';
+                    *x += 1;
+                    grid[*x][*y] = 'v';
+                }
+            },
+            '<' =>{
+                if *y == 0 {grid[*x][*y] = 'X'; return true}
+                if grid[*x][*y-1] == '#' {
+                    grid[*x][*y] = '^';
+                } else {
+                    grid[*x][*y] = 'X';
+                    *y -= 1;
+                    grid[*x][*y] = '<';
+                }
+            },
+            ch => unreachable!("{ch} at {x},{y} is not one of (^,<,>,v) expected.")
+        }
+        false
+    }
+    while !go_step(&mut x,&mut y,&mut grid) {()};
+    for row in grid.iter() {println!("{}",row.into_iter().collect::<String>());} println!("\n");
+    println!("There are {} Xs.", grid.iter().map(|row| row.iter().filter(|&x| *x == 'X').count()).sum::<usize>());
+    fn check_loop_step(x: &mut usize, y: &mut usize, grid: &mut [Vec<char>],turns: &mut HashSet<[usize;3]>, ans: &mut i64) -> bool {
+        //return true when done stepping
+        //for row in grid.iter() {println!("{row:?}");} println!("\n");
+        match grid[*x][*y] {
+            '^' => {
+                if *x == 0 {return true}
+                if grid[*x-1][*y] == '#' {
+                    if turns.insert([*x,*y,0]) { grid[*x][*y] = '>'}
+                    else {*ans += 1; return true} 
+                } else {
+                    *x -= 1;
+                    grid[*x][*y] = '^';
+                }
+            },
+            '>' =>{
+                if *y == grid[0].len() -1 {return true}
+                if grid[*x][*y+1] == '#' {
+                    if turns.insert([*x,*y,1]) { grid[*x][*y] = 'v'}
+                    else {*ans += 1; return true} 
+                } else {
+                    *y += 1;
+                    grid[*x][*y] = '>';
+                }
+            },
+            'v' =>{
+                if *x == grid.len()-1 {return true}
+                if grid[*x+1][*y] == '#' {
+                    if turns.insert([*x,*y,2]) { grid[*x][*y] = '<'}
+                    else {*ans += 1; return true} 
+                } else {
+                    *x += 1;
+                    grid[*x][*y] = 'v';
+                }
+            },
+            '<' =>{
+                if *y == 0 {return true}
+                if grid[*x][*y-1] == '#' {
+                    if turns.insert([*x,*y,3]) { grid[*x][*y] = '^'}
+                    else {*ans += 1; return true} 
+                } else {
+                    *y -= 1;
+                    grid[*x][*y] = '<';
+                }
+            },
+            ch => unreachable!("{ch} at {x},{y} is not one of (^,<,>,v) expected.")
+        }
+        false
+    }
+    let mut ans2 = 0;
+    for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            if grid[i][j] == 'X' && (i != orig_x || j != orig_y) {
+                let mut _x = orig_x.clone();
+                let mut _y = orig_y.clone();
+                let mut _grid = orig_grid.clone();
+                _grid[i][j] = '#';
+                let mut turns = HashSet::new();
+                while !check_loop_step(&mut _x,&mut _y,&mut _grid, &mut turns, &mut ans2) {()};
+            }
+        }
+    }
+    println!("part 2: {ans2}");
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day5();
+    let _ = day6();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
