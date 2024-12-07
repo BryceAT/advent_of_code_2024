@@ -330,8 +330,49 @@ fn day6() -> Result<(), Box<dyn Error>> {
     println!("part 2: {ans2}");
     Ok(())
 }
+fn day7() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(7,false,1)?;
+    let mut tests = Vec::new();
+    for line in text.split('\n') {
+        let mut test:(i64,Vec<i64>) = (0,Vec::new());
+        let mut nums = line.split(": ");
+        test.0 = nums.next().unwrap().parse()?;
+        test.1 = nums.next().unwrap().split_whitespace().filter_map(|x| x.parse().ok()).collect();
+        tests.push(test);
+    }
+    let ans1: i64 = tests.iter()
+        .filter_map(|(val,v)| {
+            if dfs(*val,v) {Some(val)} else {None}
+        }).sum();
+    fn dfs(val: i64, v: &[i64]) -> bool {
+        if v.len() == 1 {
+            val == v[0] 
+        } else {
+            let n = v.len() - 1;
+            dfs(val - v[n], &v[..n]) || (val % v[n] == 0 && dfs(val / v[n], &v[..n])) 
+        }
+    }
+    println!("part 1: {ans1}");
+    let ans2: i64 = tests.iter()
+        .filter_map(|(val,v)| {
+            if dfs2(*val,v) {Some(val)} else {None}
+        }).sum();
+    fn length_10(x:i64) -> i64 {10_i64.pow(x.ilog10() + 1)}
+    fn dfs2(val: i64, v: &[i64]) -> bool {
+        if v.len() == 1 {
+            val == v[0] 
+        } else {
+            let n = v.len() - 1;
+            (val >= v[n] && dfs2(val - v[n], &v[..n]) )
+            || (val % v[n] == 0 && dfs2(val / v[n], &v[..n]))
+            || (val % length_10(v[n]) == v[n] && dfs2(val / length_10(v[n]), &v[..n])) 
+        }
+    }
+    println!("part 2: {ans2}");
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day6();
+    let _ = day7();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
