@@ -371,8 +371,58 @@ fn day7() -> Result<(), Box<dyn Error>> {
     println!("part 2: {ans2}");
     Ok(())
 }
+fn day8() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(8,false,1)?;
+    let grid = text.split('\n').map(|row| row.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
+    let mut seen:HashMap::<char,Vec<(usize,usize)>> = HashMap::new();
+    let mut antinodes = HashSet::new();
+    fn check_and_push(nx:usize,ny:usize,grid:&[Vec<char>], antinodes: &mut HashSet<(usize,usize)>) {
+        if nx < grid.len() && ny < grid[0].len() {
+            antinodes.insert((nx,ny));
+        }
+    }
+    for i in 0..grid.len() {
+        for j in 0..grid.len() {
+            if grid[i][j] != '.' {
+                for &(x,y) in seen.get(&grid[i][j]).unwrap_or(&Vec::new()) {
+                    let dx = i.wrapping_sub(x) ; //x <= i because of check order
+                    let dy = j.max(y).wrapping_sub(j.min(y));
+                    let (nx,ny) = (x.wrapping_sub(dx),if y >= j {y + dy} else {y.wrapping_sub(dy)});
+                    check_and_push(nx,ny,&grid,&mut antinodes);
+                    let (nx,ny) = (i + dx,if y < j {j + dy} else {j.wrapping_sub(dy)});
+                    check_and_push(nx,ny,&grid,&mut antinodes);
+                }
+                seen.entry(grid[i][j]).or_insert(Vec::new()).push((i,j));
+            }
+        }
+    }
+    println!("part 1: {}", antinodes.len());
+    for mul in 2..grid.len().min(grid[0].len()) {
+        for i in 0..grid.len() {
+            for j in 0..grid.len() {
+                if grid[i][j] != '.' {
+                    for &(x,y) in seen.get(&grid[i][j]).unwrap_or(&Vec::new()) {
+                        let dx = i.wrapping_sub(x).saturating_mul(mul); //x <= i because of check order
+                        let dy = j.max(y).wrapping_sub(j.min(y)).saturating_mul(mul);
+                        if dx >= grid.len() || dy >= grid[0].len() {continue}
+                        let (nx,ny) = (x.wrapping_sub(dx),if y >= j {y + dy} else {y.wrapping_sub(dy)});
+                        check_and_push(nx,ny,&grid,&mut antinodes);
+                        let (nx,ny) = (i + dx,if y < j {j + dy} else {j.wrapping_sub(dy)});
+                        check_and_push(nx,ny,&grid,&mut antinodes);
+                    }
+                    seen.entry(grid[i][j]).or_insert(Vec::new()).push((i,j));
+                }
+            }
+        }
+    }
+    //for &(x,y)in &antinodes { grid[x][y] = '#'; }
+    //for row in grid { println!("{}",row.into_iter().collect::<String>()); }
+    //println!("{antinodes:?}");
+    println!("part 2: {}", antinodes.len());
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day7();
+    let _ = day8();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
