@@ -461,8 +461,41 @@ fn day9() -> Result<(), Box<dyn Error>> {
     println!("part 2: {:?}", files.into_iter().flat_map(|(_,ind,size)| iter::repeat(ind).take(size)).enumerate().map(|(i,x)| i * x).sum::<usize>());
     Ok(())
 }
+fn day10() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(10,false,5)?;
+    let grid = text.split('\n').map(|row|row.as_bytes().to_vec()).collect::<Vec<_>>();
+    fn count(i:usize,j:usize,grid: &[Vec<u8>],dedup: bool) -> usize {
+        let mut v = Vec::from([(i,j)]);
+        for val in b'1'..=b'9' {
+            let mut nxt = Vec::new();
+            for (i,j) in v {
+                for (x,y) in [(i+1,j),(i.wrapping_sub(1),j),(i,j+1),(i,j.wrapping_sub(1))] {
+                    if x < grid.len() && y < grid[0].len() && grid[x][y] == val {
+                        nxt.push((x,y));
+                    }
+                }
+            }
+            if dedup { nxt.sort_unstable(); nxt.dedup(); }
+            v = nxt;
+        }
+        v.len()
+    }
+    let mut ans1 = 0;
+    let mut ans2 = 0;
+    for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            if grid[i][j] == b'0' {
+                ans1 += count(i,j,&grid, true);
+                ans2 += count(i,j,&grid, false);
+            }
+        }
+    }
+    println!("part 1: {ans1}");
+    println!("part 2: {ans2}");
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day9();
+    let _ = day10();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
