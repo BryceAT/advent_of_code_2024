@@ -4,7 +4,7 @@ use std::char::EscapeDebug;
 use std::collections::*;
 use std::fmt::{LowerHex, format};
 use std::process::Child;
-use std::{fs,env};
+use std::{fs,env,iter};
 use std::error::Error;
 //use reqwest;
 use soup::prelude::*;
@@ -421,8 +421,48 @@ fn day8() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}", antinodes.len());
     Ok(())
 }
+fn day9() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(9,false,1)?;
+    let mut orig: VecDeque<_> = text.bytes().enumerate().flat_map(|(i,x)| iter::repeat(if i % 2 == 0 {Some(i/2)} else {None}).take((x-b'0') as usize)).collect();
+    let mut ans = Vec::new();
+    while let Some(x) = orig.pop_front() {
+        if let Some(val) = x {
+            ans.push(val);
+        } else {
+            while let Some(x) = orig.pop_back() {
+                if let Some(val) = x {
+                    ans.push(val); break
+                }
+            }
+        }
+    }
+    //println!("{ans:?}");
+    println!("part 1: {}", ans.into_iter().enumerate().map(|(i,x)| i * x).sum::<usize>());
+    let mut files: Vec<_> = text.bytes().map(|x| (x - b'0') as usize).enumerate().map(|(i,x)| {
+        (i % 2, if i%2==0 {i/2} else {0}, x) // (1 if is gap else 0, ind number, length)
+    }).collect();
+    let mut i = files.len() -1;
+    'outer: while i > 0 {
+        if files[i].0 == 0 {//gaps have index 0 == 1
+            for j in (0..i).filter(|j| files[*j].0 == 1) {
+                if files[j].2 >= files[i].2 {
+                    files[j].2 -= files[i].2;
+                    let mem = files[i].clone();
+                    files[i].1 = 0;
+                    files[i].0 = 1;
+                    files.insert(j,mem);
+                    continue 'outer
+                }
+            }
+        }
+        i -= 1;
+    }
+    //println!("{files:?}");
+    println!("part 2: {:?}", files.into_iter().flat_map(|(_,ind,size)| iter::repeat(ind).take(size)).enumerate().map(|(i,x)| i * x).sum::<usize>());
+    Ok(())
+}
 fn main() {
     let now = Instant::now();
-    let _ = day8();
+    let _ = day9();
     println!("Elapsed: {:.2?}", now.elapsed());
 }
