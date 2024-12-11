@@ -494,8 +494,30 @@ fn day10() -> Result<(), Box<dyn Error>> {
     println!("part 2: {ans2}");
     Ok(())
 }
+fn day11() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(11,false,1)?;
+    let v:Vec<_> = text.split_whitespace().filter_map(|x| x.parse::<usize>().ok()).collect();
+    fn tot_block(num:usize,steps:usize,mem: &mut HashMap<[usize;2],usize>) -> usize {
+        if steps == 0 {return 1}
+        if let Some(ans) = mem.get(&[num,steps]) {return *ans}
+        let ans = match (num,if num == 0 {0} else {num.ilog10()+1}, steps) {
+            (0,_,1) => 1,
+            (0,_,_) => tot_block(1,steps-1,mem),
+            (_,len,1) if len %2 == 0 => 2,
+            (_,len,_) if len %2 == 0 => tot_block(num / 10_usize.pow(len/2),steps-1,mem) + tot_block(num%10_usize.pow(len/2),steps-1,mem),
+            (_,_,1) => 1,
+            _ => tot_block(num * 2024, steps -1, mem)
+        };
+        mem.insert([num,steps], ans);
+        ans
+    }
+    let mut mem = HashMap::new();
+    println!("part 1: {}", v.iter().map(|num| tot_block(*num,25,&mut mem)).sum::<usize>());
+    println!("part 2: {}", v.iter().map(|num| tot_block(*num,75,&mut mem)).sum::<usize>());
+    Ok(())
+}
 fn main() {
-    let now = Instant::now();
-    let _ = day10();
-    println!("Elapsed: {:.2?}", now.elapsed());
+let now = Instant::now();
+let _ = day11();
+println!("Elapsed: {:.2?}", now.elapsed());
 }
