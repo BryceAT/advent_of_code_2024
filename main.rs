@@ -3,6 +3,7 @@
 use std::char::EscapeDebug;
 use std::collections::*;
 use std::fmt::{LowerHex, format};
+use std::fmt;
 use std::process::Child;
 use std::{fs,env,iter};
 use std::error::Error;
@@ -203,131 +204,107 @@ fn day5() -> Result<(), Box<dyn Error>> {
 }
 fn day6() -> Result<(), Box<dyn Error>> {
     let text: String = get_text(6,false,1)?;
-    let mut grid = text.split('\n').map(|row| row.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
-    let orig_grid = grid.clone();
-    let mut x = 0; let mut y = 0;
-    'outer: for i in 0..grid.len() {
-        for j in 0..grid[0].len() {
-            match grid[i][j] {
-                '.'|'#' => (),
-                '^'|'>'|'v'|'<' => {x = i; y=j; break 'outer},
-                x => unreachable!("{x} should not be in the map"), 
+    #[derive(Clone,Hash,PartialEq,Eq)]
+    enum Direction {Up,Right,Down,Left}
+    impl Default for Direction {
+        fn default() -> Self { Direction::Up }
+    }
+    impl Direction {
+        fn turn(&mut self) {
+            match self {
+                Up => *self = Right,
+                Right => *self = Down,
+                Down => *self = Left,
+                Left => *self = Up,
             }
         }
     }
-    let orig_x = x; let orig_y = y;
-    fn go_step(x: &mut usize, y: &mut usize, grid: &mut [Vec<char>]) -> bool {
-        //for row in grid.iter() {println!("{row:?}");} println!("\n");
-        match grid[*x][*y] {
-            '^' => {
-                if *x == 0 {grid[*x][*y] = 'X';return true}
-                if grid[*x-1][*y] == '#' {
-                    grid[*x][*y] = '>';
-                } else {
-                    grid[*x][*y] = 'X';
-                    *x -= 1;
-                    grid[*x][*y] = '^';
-                }
-            },
-            '>' =>{
-                if *y == grid[0].len() -1 {grid[*x][*y] = 'X';return true}
-                if grid[*x][*y+1] == '#' {
-                    grid[*x][*y] = 'v';
-                } else {
-                    grid[*x][*y] = 'X';
-                    *y += 1;
-                    grid[*x][*y] = '>';
-                }
-            },
-            'v' =>{
-                if *x == grid.len()-1 {grid[*x][*y] = 'X'; return true}
-                if grid[*x+1][*y] == '#' {
-                    grid[*x][*y] = '<';
-                } else {
-                    grid[*x][*y] = 'X';
-                    *x += 1;
-                    grid[*x][*y] = 'v';
-                }
-            },
-            '<' =>{
-                if *y == 0 {grid[*x][*y] = 'X'; return true}
-                if grid[*x][*y-1] == '#' {
-                    grid[*x][*y] = '^';
-                } else {
-                    grid[*x][*y] = 'X';
-                    *y -= 1;
-                    grid[*x][*y] = '<';
-                }
-            },
-            ch => unreachable!("{ch} at {x},{y} is not one of (^,<,>,v) expected.")
-        }
-        false
+    use Direction::*;
+    #[derive(Clone,Hash,Default,PartialEq,Eq)]
+    struct Position {
+        x: usize,
+        y: usize,
     }
-    while !go_step(&mut x,&mut y,&mut grid) {()};
-    for row in grid.iter() {println!("{}",row.into_iter().collect::<String>());} println!("\n");
-    println!("There are {} Xs.", grid.iter().map(|row| row.iter().filter(|&x| *x == 'X').count()).sum::<usize>());
-    fn check_loop_step(x: &mut usize, y: &mut usize, grid: &mut [Vec<char>],turns: &mut HashSet<[usize;3]>, ans: &mut i64) -> bool {
-        //return true when done stepping
-        //for row in grid.iter() {println!("{row:?}");} println!("\n");
-        match grid[*x][*y] {
-            '^' => {
-                if *x == 0 {return true}
-                if grid[*x-1][*y] == '#' {
-                    if turns.insert([*x,*y,0]) { grid[*x][*y] = '>'}
-                    else {*ans += 1; return true} 
-                } else {
-                    *x -= 1;
-                    grid[*x][*y] = '^';
-                }
-            },
-            '>' =>{
-                if *y == grid[0].len() -1 {return true}
-                if grid[*x][*y+1] == '#' {
-                    if turns.insert([*x,*y,1]) { grid[*x][*y] = 'v'}
-                    else {*ans += 1; return true} 
-                } else {
-                    *y += 1;
-                    grid[*x][*y] = '>';
-                }
-            },
-            'v' =>{
-                if *x == grid.len()-1 {return true}
-                if grid[*x+1][*y] == '#' {
-                    if turns.insert([*x,*y,2]) { grid[*x][*y] = '<'}
-                    else {*ans += 1; return true} 
-                } else {
-                    *x += 1;
-                    grid[*x][*y] = 'v';
-                }
-            },
-            '<' =>{
-                if *y == 0 {return true}
-                if grid[*x][*y-1] == '#' {
-                    if turns.insert([*x,*y,3]) { grid[*x][*y] = '^'}
-                    else {*ans += 1; return true} 
-                } else {
-                    *y -= 1;
-                    grid[*x][*y] = '<';
-                }
-            },
-            ch => unreachable!("{ch} at {x},{y} is not one of (^,<,>,v) expected.")
-        }
-        false
+    #[derive(PartialEq)]
+    enum State {Ready,Out,Cycle}
+    use State::*;
+    #[derive(Default,Clone)]
+    struct Guard {
+        grid: Vec<Vec<char>>,
+        pos: Position,
+        init: Position,
+        facing: Direction,
+        seen: HashSet<(Position, Direction)>,
     }
+    impl fmt::Display for Guard {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let mut temp = self.grid.clone();
+            for (p,_) in self.seen.iter() {
+                temp[p.x][p.y] = 'X';
+            }
+            write!(f, "{}", temp.into_iter().map(|row| row.into_iter().collect::<String>()).collect::<Vec<_>>().join("\n"))
+        }
+    }
+    impl Guard {
+        fn new(text: &str) -> Self {
+            let grid = text.split('\n').map(|row| row.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
+            let mut x:usize=0; let mut y:usize=0; 
+            'outer: for i in 0..grid.len() { for j in 0..grid[0].len() { if grid[i][j] == '^' {(x,y) = (i,j); break 'outer}}} 
+            let seen = HashSet::from([(Position{x,y},Up)]);
+            Guard{grid,pos:Position{x,y},init:Position{x,y},seen,..Default::default()}
+        }
+        fn peek(&self,p: &Position) -> Option<char> {
+            if p.x < self.grid.len() && p.y < self.grid[0].len() {
+                Some(self.grid[p.x][p.y])
+            } else {
+                None
+            }
+        }
+        fn step(&self) -> Position {
+            let mut p = self.pos.clone();
+            match self.facing {
+                Up => p.x = p.x.wrapping_sub(1),
+                Right => p.y += 1,
+                Down => p.x += 1,
+                Left => p.y = p.y.wrapping_sub(1),
+            }
+            p
+        }
+        fn forward(&mut self) -> State {
+            let p = self.step();
+            match self.peek(&p) {
+                None => Out,
+                Some('#') => {self.facing.turn(); self.forward()}
+                Some('.') if self.seen.contains(&(p.clone(),self.facing.clone())) => Cycle,
+                _ => {self.seen.insert((p.clone(),self.facing.clone())); self.pos = p; Ready}
+            }
+        }
+        fn unique_positions(&self) -> HashSet<Position> {
+            self.seen.iter().map(|(p,_)| p.clone()).collect::<HashSet<_>>()
+        }
+
+    }
+    let orig = Guard::new(&text);
+    let mut guard = orig.clone();
+    loop {
+        if guard.forward() == Out {break}
+        //println!("{guard} \n");
+    }
+    println!("part 1: {}", guard.unique_positions().len());
     let mut ans2 = 0;
-    for i in 0..grid.len() {
-        for j in 0..grid[0].len() {
-            if grid[i][j] == 'X' && (i != orig_x || j != orig_y) {
-                let mut _x = orig_x.clone();
-                let mut _y = orig_y.clone();
-                let mut _grid = orig_grid.clone();
-                _grid[i][j] = '#';
-                let mut turns = HashSet::new();
-                while !check_loop_step(&mut _x,&mut _y,&mut _grid, &mut turns, &mut ans2) {()};
+    for p in guard.unique_positions().into_iter().filter(|p| p != &guard.init) {
+        let mut temp = orig.clone();
+        temp.grid[p.x][p.y] = '#';
+        loop {
+            match temp.forward() {
+                Out => break,
+                Cycle => {ans2 += 1; break},
+                Ready => (),
             }
         }
+        //println!("{guard} \n");
     }
-    println!("part 2: {ans2}");
+    println!("part 2: {}", ans2);
     Ok(())
 }
 fn day7() -> Result<(), Box<dyn Error>> {
@@ -518,6 +495,6 @@ fn day11() -> Result<(), Box<dyn Error>> {
 }
 fn main() {
 let now = Instant::now();
-let _ = day11();
+let _ = day6();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
