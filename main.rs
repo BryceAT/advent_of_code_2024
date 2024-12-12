@@ -291,19 +291,22 @@ fn day6() -> Result<(), Box<dyn Error>> {
         //println!("{guard} \n");
     }
     println!("part 1: {}", guard.unique_positions().len());
-    let mut ans2 = 0;
-    for p in guard.unique_positions().into_iter().filter(|p| p != &guard.init) {
-        let mut temp = orig.clone();
-        temp.grid[p.x][p.y] = '#';
-        loop {
-            match temp.forward() {
-                Out => break,
-                Cycle => {ans2 += 1; break},
-                Ready => (),
+    let ans2:usize = guard.unique_positions().par_iter().map(|p| {
+        let mut ans2 = 0;
+        if p != &guard.init {
+            let mut temp = orig.clone();
+            temp.grid[p.x][p.y] = '#';
+            loop {
+                match temp.forward() {
+                    Out => break,
+                    Cycle => {ans2 += 1; break},
+                    Ready => (),
+                }
             }
         }
+        ans2
         //println!("{guard} \n");
-    }
+    }).sum();
     println!("part 2: {}", ans2);
     Ok(())
 }
@@ -553,6 +556,6 @@ fn day12() -> Result<(), Box<dyn Error>> {
 }
 fn main() {
 let now = Instant::now();
-let _ = day12();
+let _ = day6();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
