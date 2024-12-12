@@ -493,8 +493,66 @@ fn day11() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}", v.iter().map(|num| tot_block(*num,75,&mut mem)).sum::<usize>());
     Ok(())
 }
+fn day12() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(12,false,1)?;
+    let grid = text.split('\n').map(|row| row.chars().collect::<Vec<_>>()).collect::<Vec<_>>();
+    //for row in grid.iter() { println!("{}",row.iter().collect::<String>()); }
+    fn get_shape(i: usize,j:usize, grid: &[Vec<char>],shape: &mut HashSet<[usize;2]>, seen: &mut HashSet<[usize;2]>) {
+        for (x,y) in [(i+1,j),(i.wrapping_sub(1),j),(i,j+1),(i,j.wrapping_sub(1))] {
+            if x < grid.len() && y < grid[0].len() && grid[x][y] == grid[i][j] && shape.insert([x,y]) {
+                seen.insert([x,y]);
+                get_shape(x,y,grid,shape,seen);
+            }
+        }
+    }
+    fn get_area(shape: &HashSet<[usize;2]>) -> usize {
+        shape.len()
+    }
+    fn get_perm1(shape: &HashSet<[usize;2]>) -> usize {
+        let mut ans = 0;
+        for &[x,y] in shape {
+            if !shape.contains(&[x.wrapping_sub(1),y]) {ans += 1}
+            if !shape.contains(&[x+1,y]) {ans += 1}
+            if !shape.contains(&[x,y.wrapping_sub(1)]) {ans += 1}
+            if !shape.contains(&[x,y+1]) {ans += 1}
+        }
+        ans
+    }
+    fn get_perm2(shape: &HashSet<[usize;2]>) -> usize {
+        //only count left most and top most fences
+        let mut ans = 0; 
+        for &[x,y] in shape {
+            if !shape.contains(&[x.wrapping_sub(1),y]) //top
+                && (!shape.contains(&[x,y.wrapping_sub(1)]) || shape.contains(&[x.wrapping_sub(1),y.wrapping_sub(1)])) {ans += 1}
+            if !shape.contains(&[x+1,y])  //bottom
+                && (!shape.contains(&[x,y.wrapping_sub(1)]) || shape.contains(&[x+1,y.wrapping_sub(1)])) {ans += 1}
+            if !shape.contains(&[x,y.wrapping_sub(1)]) // left
+                && (!shape.contains(&[x.wrapping_sub(1),y]) || shape.contains(&[x.wrapping_sub(1),y.wrapping_sub(1)])) {ans += 1}
+            if !shape.contains(&[x,y+1]) //right
+                && (!shape.contains(&[x.wrapping_sub(1),y]) || shape.contains(&[x.wrapping_sub(1),y+1])) {ans += 1}
+        }
+        ans
+    }
+    let mut ans1 = 0;
+    let mut ans2 = 0;
+    let mut seen = HashSet::new();
+    for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            if seen.insert([i,j]) {
+                let mut shape = HashSet::from([[i,j]]);
+                get_shape(i,j,&grid,&mut shape,&mut seen);
+                ans1 += get_area(&shape) * get_perm1(&shape);
+                ans2 += get_area(&shape) * get_perm2(&shape);
+                //println!("{i} {j} {} {} ",get_area(&shape),get_perm2(&shape));
+            }
+        }
+    }
+    println!("part 1: {}", ans1);
+    println!("part 2: {}", ans2);
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day6();
+let _ = day12();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
