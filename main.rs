@@ -554,8 +554,55 @@ fn day12() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}", ans2);
     Ok(())
 }
+fn day13() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(13,false,1)?;
+    struct Game {
+        ax: i64, ay: i64,
+        bx: i64, by: i64,
+        prizex: i64, prizey: i64,
+    }
+    fn proc_line(s:&str,c:char) -> Vec<i64> {
+        s.split(':').skip(1).next().unwrap().split(',')
+        .filter_map(|s| s.split(c).skip(1).next().unwrap().parse::<i64>().ok())
+        .collect()
+    }
+    impl Game {
+        fn new(lines: &mut dyn Iterator<Item = &str>) -> Self {
+            let axy = proc_line(lines.next().unwrap(),'+');
+            let bxy = proc_line(lines.next().unwrap(),'+');
+            let prizexy = proc_line(lines.next().unwrap(),'=');
+            lines.next(); //consume empty line
+            Game{ax:axy[0],ay:axy[1],bx:bxy[0],by:bxy[1],prizex:prizexy[0],prizey:prizexy[1]}
+        }
+        fn invert_2_win(&self) -> Option<i64> {
+            let determinant = self.ax * self.by - self.bx * self.ay;
+            if determinant != 0 {
+                let a_push = self.by * self.prizex - self.bx * self.prizey;
+                let b_push = - self.ay * self.prizex + self.ax * self.prizey;
+                if a_push % determinant == 0 && b_push % determinant == 0 {
+                    Some(3 * a_push / determinant + b_push / determinant)
+                } else {None}
+            } else {//hope for no collinear parts
+                println!("found a collinear equation"); 
+                None
+            } 
+        }
+    }
+    let mut lines = text.split('\n').peekable();
+    let mut games = Vec::new();
+    while lines.peek().is_some() {
+        games.push(Game::new(&mut lines));
+    }
+    println!("part 1: {}", games.par_iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
+    for game in games.iter_mut() {
+        game.prizex += 10000000000000;
+        game.prizey += 10000000000000;
+    }
+    println!("part 2: {}", games.par_iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day6();
+let _ = day13();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
