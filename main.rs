@@ -15,7 +15,7 @@ use rayon::prelude::*;
 use std::sync::mpsc::channel;
 use std::cmp::Reverse;
 use std::fs::File;
-use std::io::Write;
+use std::io::{stdin, Write};
 use rand::prelude::*;
 
 fn get_text(day: i32,sample:bool,part:usize) -> Result<String, Box<dyn Error>> {
@@ -593,16 +593,75 @@ fn day13() -> Result<(), Box<dyn Error>> {
     while lines.peek().is_some() {
         games.push(Game::new(&mut lines));
     }
-    println!("part 1: {}", games.par_iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
+    println!("part 1: {}", games.iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
     for game in games.iter_mut() {
         game.prizex += 10000000000000;
         game.prizey += 10000000000000;
     }
-    println!("part 2: {}", games.par_iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
+    println!("part 2: {}", games.iter().filter_map(|game| game.invert_2_win()).sum::<i64>());
+    Ok(())
+}
+fn day14() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(14,false,1)?;
+    let wide = 101;// 11;
+    let tall = 103;//7;
+    let mut robots = Vec::new();
+    for line in text.split('\n') {
+        let mut robot = Vec::new();
+        for part in line.split_whitespace() {
+            for num in part.split('=').skip(1).next().unwrap().split(',') {
+                robot.push(num.parse::<i64>().ok().unwrap());
+            }
+        }
+        robots.push(robot);
+    }
+    let orig = robots.clone();
+    for robot in robots.iter_mut() {
+        robot[0] += robot[2] * 100;
+        robot[0] = robot[0].rem_euclid(wide);
+        robot[1] += robot[3] * 100;
+        robot[1] = robot[1].rem_euclid(tall);
+    }
+    let mut quadrants = vec![0;4];
+    for robot in robots.iter() {
+        match (robot[0], robot[1]) {
+            (x,y) if x == wide / 2 || y == tall / 2 => (),
+            (x,y) if x < wide / 2 && y < tall / 2 => quadrants[0] += 1,
+            (x,y) if x > wide / 2 && y < tall / 2 => quadrants[1] += 1,
+            (x,y) if x < wide / 2 && y > tall / 2 => quadrants[2] += 1,
+            (x,y) if x > wide / 2 && y > tall / 2 => quadrants[3] += 1,
+            _ => ()
+        }
+    }
+    println!("{quadrants:?}");
+    println!("part 1: {}", quadrants.into_iter().fold(1,|a,b| a * b));
+    robots = orig.clone();
+    fn step(robots: &mut Vec<Vec<i64>>,wide:i64,tall:i64) {
+        for robot in robots.iter_mut() {
+            robot[0] += robot[2];
+            robot[0] = robot[0].rem_euclid(wide);
+            robot[1] += robot[3];
+            robot[1] = robot[1].rem_euclid(tall);
+        }
+    }
+    let mut input = "".to_string();
+    for i in 1.. {
+        step(&mut robots,wide,tall);
+        println!("step is {i}");
+        let mut grid = vec![vec![' ';wide as usize]; tall as usize];
+        for robot in robots.iter() {
+            grid[robot[1] as usize][robot[0] as usize] = 'X';
+        }
+        if grid.iter().any(|c| c.iter().collect::<String>().contains("XXXXXXX")) {
+            for row in grid {println!("{}",row.iter().collect::<String>());}
+            stdin().read_line(&mut input) .expect("Failed to read line");
+            if input == "s".to_string() {break}
+        }
+    }
     Ok(())
 }
 fn main() {
 let now = Instant::now();
-let _ = day13();
+let _ = day14();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
