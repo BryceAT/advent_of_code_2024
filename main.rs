@@ -660,8 +660,256 @@ fn day14() -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+fn day15() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(15,false,2)?;
+    let mut it = text.split('\n');
+    let mut grid = it.by_ref().take_while(|row| !row.is_empty()).map(|row| row.chars().collect::<Vec<_>>()).collect::<Vec<_>>();
+    let directions: Vec<char> = it.flat_map(|row| row.chars()).collect();
+    let mut cur = (0,0);
+    'outer: for (i,row) in grid.iter().enumerate() {for (j,c) in row.iter().enumerate() {if *c == '@' {cur = (i,j); break 'outer}}}
+    fn step(cur: &mut (usize,usize), grid: &mut [Vec<char>], d: char) {
+        match d {
+            '<' if grid[cur.0][..cur.1].contains(&'.') => {
+                let mut y = 0;
+                for j in (0..cur.1).rev() {match grid[cur.0][j] {'#'=>return (), '.'=> {y=j;break},_=> ()}}
+                for j in y..cur.1 {
+                    grid[cur.0][j] = grid[cur.0][j+1];
+                }
+                grid[cur.0][cur.1] = '.';
+                cur.1 -= 1;
+            },
+            '>' if grid[cur.0][cur.1..].contains(&'.') => {
+                let mut y = 0;
+                for j in cur.1.. {match grid[cur.0][j] {'#'=>return (), '.' => {y=j;break},_=>()}}
+                for j in (cur.1 .. y).rev() {
+                    grid[cur.0][j+1] = grid[cur.0][j];
+                }
+                grid[cur.0][cur.1] = '.';
+                cur.1 += 1;
+            },
+            '^' if (0..cur.0).any(|x| grid[x][cur.1] == '.') => {
+                let mut x = 0;
+                for i in (0..cur.0).rev() {match grid[i][cur.1] {'#'=>return (), '.'=> {x=i;break}, _=>()}}
+                for i in x..cur.0 {
+                    grid[i][cur.1] = grid[i+1][cur.1];
+                }
+                grid[cur.0][cur.1] = '.';
+                cur.0 -= 1;
+            },
+            'v' if (cur.0..grid.len()).any(|x| grid[x][cur.1] == '.') => {
+                let mut x = 0;
+                for i in cur.0.. {match grid[i][cur.1] {'#'=>return (), '.'=> {x=i;break}, _=>()}}
+                for i in (cur.0 .. x).rev() {
+                    grid[i+1][cur.1] = grid[i][cur.1];
+                }
+                //println!("x is {x} cur is {cur:?}");
+                grid[cur.0][cur.1] = '.';
+                cur.0 += 1;
+            },
+            _ => ()
+        }
+    }
+    for d in directions { 
+        step(&mut cur, &mut grid, d); 
+        //println!("{d}");
+        //for row in grid.iter() { println!("{}", row.into_iter().collect::<String>()); }
+    }
+    //for row in grid.iter() { println!("{}", row.into_iter().collect::<String>()); }
+    println!("part 1: {:?}", grid.iter().enumerate().map(|(i,row)| row.iter().enumerate().filter_map(|(j,x)| if *x == 'O' {Some(i*100 + j)} else {None}).sum::<usize>()).sum::<usize>());
+    let mut it2 = text.split('\n');
+    let mut grid2 = it2.by_ref().take_while(|row| !row.is_empty()).map(|row| row.chars().flat_map(|c| match c {
+        '#' => ['#','#'].into_iter(),
+        'O' => ['[',']'].into_iter(),
+        '.' => ['.','.'].into_iter(),
+        _ => ['@','.'].into_iter(),
+    }).collect::<Vec<_>>()).collect::<Vec<_>>();
+    let directions: Vec<char> = it2.flat_map(|row| row.chars()).collect();
+    let mut cur = (0,0);
+    'outer: for (i,row) in grid2.iter().enumerate() {for (j,c) in row.iter().enumerate() {if *c == '@' {cur = (i,j); break 'outer}}}
+    fn check(cur: (usize,usize), grid: &[Vec<char>], d: char) -> bool {
+        match d {
+            '<' => {
+                for j in (0..cur.1).rev() {
+                    match grid[cur.0][j] {
+                        '#'=> return false, 
+                        '.'=> return true,
+                        _ => ()
+                    }
+                }
+            },
+            '>' => {
+                for j in cur.1 + 1 .. {
+                    match grid[cur.0][j] {
+                        '#'=> return false, 
+                        '.'=> return true,
+                        _ => ()
+                    }
+                }
+            },
+            '^' => {
+                for i in (0..cur.0).rev() {
+                    match grid[i][cur.1] {
+                        '#' => return false, 
+                        '.' => return true,
+                        '[' => return check((i,cur.1),grid,d) && check((i,cur.1 + 1),grid,d),
+                        ']' => return check((i,cur.1 -1 ),grid,d) && check((i,cur.1),grid,d),
+                        _ => () 
+                    }
+                }
+            },
+            'v' => {
+                for i in cur.0 + 1 .. {
+                    match grid[i][cur.1] {
+                        '#' => return false, 
+                        '.' => return true,
+                        '[' => return check((i, cur.1),grid,d) && check((i, cur.1 + 1),grid,d),
+                        ']' => return check((i, cur.1 - 1 ),grid,d) && check((i , cur.1),grid,d),
+                        _ => () 
+                    }
+                }
+            },
+            _ => unreachable!("d must be ^v<> not {d}"),
+        }
+        false
+    }
+    fn step_rec(cur: (usize,usize), grid: &mut Vec<Vec<char>>, d: char) {
+        //assume move is possible
+        //for row in grid.iter() { println!("{}", row.into_iter().collect::<String>()); }
+        match d {
+            '<' => {
+                match grid[cur.0][cur.1 -1] {
+                    '.' => (),
+                    _ => step_rec((cur.0,cur.1-1),grid,d),
+                } 
+                grid[cur.0][cur.1 -1] = grid[cur.0][cur.1];
+                grid[cur.0][cur.1] = '.';
+            },
+            '>' => {
+                match grid[cur.0][cur.1 +1] {
+                    '.' => (),
+                    _ => step_rec((cur.0,cur.1 + 1),grid,d),
+                } 
+                grid[cur.0][cur.1 + 1] = grid[cur.0][cur.1];
+                grid[cur.0][cur.1] = '.';
+            },
+            '^' => {
+                match grid[cur.0 - 1][cur.1] {
+                    '.' => (),
+                    '[' => {
+                        step_rec((cur.0 - 1,cur.1),grid,d);
+                        step_rec((cur.0 - 1,cur.1+1),grid,d)
+                    },
+                    ']' => {
+                        step_rec((cur.0 - 1,cur.1),grid,d);
+                        step_rec((cur.0 - 1,cur.1-1),grid,d)
+                    },
+                    _ => step_rec((cur.0 - 1,cur.1),grid,d),
+                } 
+                grid[cur.0 - 1][cur.1] = grid[cur.0][cur.1];
+                grid[cur.0][cur.1] = '.';
+            },
+            'v' => {
+                match grid[cur.0 + 1][cur.1] {
+                    '.' => (),
+                    '[' => {
+                        step_rec((cur.0 + 1,cur.1),grid,d);
+                        step_rec((cur.0 + 1,cur.1+1),grid,d)
+                    },
+                    ']' => {
+                        step_rec((cur.0 + 1,cur.1),grid,d);
+                        step_rec((cur.0 + 1,cur.1-1),grid,d)
+                    },
+                    _ => step_rec((cur.0 + 1,cur.1),grid,d),
+                } 
+                grid[cur.0 + 1][cur.1] = grid[cur.0][cur.1];
+                grid[cur.0][cur.1] = '.';
+            },
+            _ => unreachable!("d is not valid {cur:?}")
+        }
+    }
+    //let mut input = "press enter to continue".to_string();
+    for d in directions { 
+        if check(cur.clone(),&grid2,d) {
+            step_rec(cur.clone(),&mut grid2, d);
+            cur = match d {
+                '<' => (cur.0, cur.1 - 1),
+                '>' => (cur.0, cur.1 + 1),
+                '^' => (cur.0 - 1, cur.1),
+                'v' => (cur.0 + 1, cur.1),
+                _ => unreachable!("d is not valid {d} {cur:?}"),
+            }
+        }
+        //println!("{d}");
+        //for row in grid2.iter() { println!("{}", row.into_iter().collect::<String>()); }
+        //stdin().read_line(&mut input).expect("Failed to read line");
+    }
+    for row in grid2.iter() { println!("{}", row.into_iter().collect::<String>()); }
+    println!("part 2: {:?}", grid2.iter().enumerate().map(|(i,row)| row.iter().enumerate().filter_map(|(j,x)| if *x == '[' {Some(i*100 + j)} else {None}).sum::<usize>()).sum::<usize>());
+    
+    Ok(())
+}
+fn day16() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(16,false,1)?;
+    let grid = text.split('\n').map(|line| line.chars().collect::<Vec<_>>()).collect::<Vec<_>>();
+    let foward_cost = 1;
+    let turn_cost = 1_000;
+    let mut heap = BinaryHeap::new();
+    let mut start_x = 0; let mut start_y = 0;
+    for i in 0..grid.len() {for j in 0..grid[0].len() {if grid[i][j] == 'S' { (start_x,start_y) = (i,j);}}}
+    heap.push((Reverse(0),start_x,start_y,0_i32));
+    let mut seen:HashMap<(usize,usize,i32),i64> = HashMap::new();
+    let mut best = 0;
+    while let Some((Reverse(cost),x,y,d)) = heap.pop() {
+        if grid[x][y] == 'E' {
+            println!("part 1 {cost}"); best = cost; break
+        }
+        for (nxt_cost,a,b,e) in [
+            match d {
+                0 => (cost + foward_cost, x,y+1,d),
+                1 => (cost + foward_cost, x+1,y,d),
+                2 => (cost + foward_cost, x,y.wrapping_sub(1),d),
+                _ => (cost + foward_cost, x.wrapping_sub(1),y,d),
+            },
+            (cost + turn_cost, x,y,(d + 1).rem_euclid(4)),
+            (cost + turn_cost, x,y,(d - 1).rem_euclid(4))] {
+            if a < grid.len() && b < grid[0].len() && grid[a][b] != '#' && nxt_cost < *seen.get(&(a,b,e)).unwrap_or(&i64::MAX) {
+                heap.push((Reverse(nxt_cost),a,b,e));
+                seen.insert((a,b,e),nxt_cost);
+            }
+        }
+    }
+    let mut seats = HashSet::new();
+    fn dfs(cost: i64, grid: &[Vec<char>], seats: &mut HashSet<[usize;2]>, path: &mut Vec<(usize,usize,i32)>, best: i64,seen: &HashMap<(usize,usize,i32),i64>) {
+        if path.is_empty() {return ()}
+        let &(x,y,d) = path.last().unwrap();
+        if cost == best && grid[x][y] == 'E' {
+            for &(a,b,_) in path.iter() {
+                seats.insert([a,b]);
+            }
+            return ()
+        }
+        for (nxt_cost,a,b,e) in [
+            match d {
+                0 => (cost + 1, x,y+1,d),
+                1 => (cost + 1, x+1,y,d),
+                2 => (cost + 1, x,y.wrapping_sub(1),d),
+                _ => (cost + 1, x.wrapping_sub(1),y,d),
+            },
+            (cost + 1_000, x,y,(d + 1).rem_euclid(4)),
+            (cost + 1_000, x,y,(d - 1).rem_euclid(4))] {
+            if a < grid.len() && b < grid[0].len() && grid[a][b] != '#' && nxt_cost <= best && *seen.get(&(a,b,e)).unwrap_or(&0) == nxt_cost {
+                path.push((a,b,e));
+                dfs(nxt_cost,grid, seats, path, best,seen);
+                path.pop();
+            }
+        }
+    }
+    dfs(0,&grid,&mut seats, &mut vec![(start_x, start_y, 0)], best,&seen);
+    println!("part 2: {}", seats.len());
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day14();
+let _ = day15();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
