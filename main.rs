@@ -908,8 +908,130 @@ fn day16() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}", seats.len());
     Ok(())
 }
+fn day17() -> Result<(), Box<dyn Error>> {
+    let text: String = get_text(17,false,1)?;
+    let it: Vec<_> = text.split('\n').take(3).filter_map(|line| line.split(": ").skip(1).next().unwrap().parse::<i64>().ok()).collect();
+    let program: Vec<_> = text.split('\n').skip(4).next().unwrap().split(": ").skip(1).next().unwrap().split(',').filter_map(|x| x.parse::<i64>().ok()).collect();
+    fn combo(operand: i64, reg: &[i64; 3]) -> i64 {
+        match operand {
+            0..=3 => operand,
+            4 => reg[0],
+            5 => reg[1],
+            6 => reg[2],
+            _ => unreachable!("7 is reserved and does not appear in valid programs")
+        }
+    }
+    let mut outputs = Vec::new();
+    fn step(state: (usize,[i64; 3]), program: &[i64], outputs: &mut Vec<i64>) -> (usize,[i64; 3]) {
+        let i = state.0;
+        let reg = state.1;
+        let opcode = program[i]; 
+        let operand = program[i+1];
+        match opcode {
+            0 => (i+2,[reg[0] / 2_i64.pow(combo(operand,&reg) as u32), reg[1], reg[2]]),
+            1 => (i+2,[reg[0], reg[1] ^ operand as i64, reg[2]]),
+            2 => (i+2,[reg[0], combo(operand,&reg) as i64 % 8, reg[2]]),
+            3 if reg[0] == 0 => (i+2,[reg[0],reg[1],reg[2]]),
+            3 => (operand as usize, [reg[0],reg[1],reg[2]]),
+            4 => (i+2,[reg[0], reg[1] ^ reg[2], reg[2]]),
+            5 => {outputs.push(combo(operand,&reg) % 8 ); (i+2,[reg[0], reg[1], reg[2]])},
+            6 => (i+2,[reg[0], reg[0] / 2_i64.pow(combo(operand,&reg) as u32), reg[2]]),
+            7 => (i+2,[reg[0], reg[1], reg[0] / 2_i64.pow(combo(operand,&reg) as u32)]),
+            _ => unreachable!("opcode must be less than 8"),
+        }
+    }
+    let mut state = (0,[it[0],it[1],it[2]]);
+    while state.0 < program.len() -1 {
+        state = step(state, &program, &mut outputs);
+    }
+    println!("{}",outputs.iter().map(|x| format!("{x}")).collect::<Vec<_>>().join(","));
+    //let program = vec![0,3,5,4,3,0];
+    /*let obscure = |a| {((a % 8) ^ 3 ^ (a / (1 << ((a%8)^5)) as i64)) % 8};
+    let mut ans: Vec<_> = (10 ..  30_000_000_000_000).into_par_iter()
+        .filter(|&a| obscure(a / 32768) == 5)
+        .filter(|&a| obscure(a) == 2)
+        .filter(|&a| obscure(a / 8) == 4)
+        .filter(|&a| obscure(a / 64 ) == 1)
+        .filter(|&a| obscure(a / 512 ) == 5)
+        .filter(|&a| obscure(a / 4096 ) == 7)
+        .filter(|&a| obscure(a / 262144) == 1)
+        .filter(|&a| obscure(a / 2097152) == 6)
+        .filter(|&a| obscure(a / 16777216) == 4)
+        .filter(|&a| obscure(a / 134217728) == 3)
+        .filter(|&a| obscure(a / 1073741824) == 5)
+        .filter(|&a| obscure(a / 8589934592) == 5)
+        .filter(|&a| obscure(a / 68719476736) == 0)
+        .filter(|&a| obscure(a / 549755813888) == 3)
+        .filter(|&a| obscure(a / 4398046511104) == 3)
+        .filter(|&a| obscure(a / 35184372088832) == 0)
+        .collect();
+    ans.sort_unstable();
+    println!("{ans:?}");
+    */
+    
+    //If register C contains 9, the program 2,6 would set register B to 1.
+    //println!("{} = 1", {let mut state = (0,[0,0,9]); let program = [2,6]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} state.1[1]});
+    //If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.
+    //println!("{:?} = [0,1,2]", {let mut outputs = Vec::new(); let mut state = (0,[10,0,0]); let program = [5,0,5,1,5,4]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} outputs});
+    //If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
+    //println!("{:?} = [4,2,5,6,7,7,7,7,3,1,0]", {let mut outputs = Vec::new(); let mut state = (0,[2024,6,6]); let program = [0,1,5,4,3,0]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} outputs});
+    //println!("{:?} = 0", {let mut outputs = Vec::new(); let mut state = (0,[2024,6,6]); let program = [0,1,5,4,3,0]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} state.1[0]});
+    //If register B contains 29, the program 1,7 would set register B to 26.
+    //println!("{:?} = 26", {let mut outputs = Vec::new(); let mut state = (0,[6,29,6]); let program = [1,7]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} state.1[1]});
+    //If register B contains 2024 and register C contains 43690, the program 4,0 would set register B to 44354.
+    //println!("{:?} = 44354", {let mut outputs = Vec::new(); let mut state = (0,[6,2024,43690]); let program = [4,0]; while state.0 < program.len() {state = step(state, &program, &mut outputs)} state.1[1]});
+    let track:Vec<_> = program.iter().rev().cloned().collect();
+    fn dfs(cur: i64, i:usize, track: &[i64]) -> Option<i64> {
+        if i == track.len() {return Some(cur)}
+        for x in cur * 8 .. cur * 8 + 8 {
+            if ((x%8) ^ 3 ^ (x/2_i64.pow((x%8) as u32 ^ 5))) % 8 == track[i] {
+                if let Some(ans) = dfs(x,i+1,track) {
+                    return Some(ans)
+                }
+            }
+        }
+        None
+    }
+    println!("part 2: {}", dfs(0,0,&track).unwrap());
+    Ok(())
+}
+fn day18() -> Result<(), Box<dyn Error>> {
+    let text = get_text(18, false, 1)?;
+    let blocks:HashMap<Vec<_>,usize> = text.split('\n').enumerate()
+        .map(|(i,s)| (s.split(',').filter_map(|x| x.parse::<i32>().ok()).collect::<Vec<_>>(),i)).collect();
+    fn steps(blocks: &HashMap<Vec<i32>,usize>, time: usize) -> Option<i32> {
+        let n = 71;
+        let mut level = VecDeque::new();
+        let mut seen = HashSet::new();
+        level.push_back((vec![0,0],0));
+        while let Some((cur,step)) = level.pop_front() {
+            let a = cur[0];
+            let b = cur[1];
+            if a == n-1 && b == n-1 {return Some(step)}
+            for (x,y) in [(a +1,b),(a-1,b),(a,b+1),(a,b-1)] {
+                if x >= 0 && y >= 0 && x < n && y < n && seen.insert([x,y]) && *blocks.get(&vec![x,y]).unwrap_or(&usize::MAX) >= time {
+                    level.push_back((vec![x,y], step + 1));
+                }
+            }
+        }
+        None
+    }
+    if let Some(ans) = steps(&blocks, 1024) {println!("part 1: {ans}");}
+    let mut l = 12;
+    let mut r = blocks.len();
+    while l < r {
+        let mid = (l + r ) / 2;
+        if steps(&blocks, mid).is_some() {
+            l = mid + 1;
+        } else {
+            r = mid;
+        }
+    }
+    println!("part 2: {}",text.split('\n').skip(l-1).next().unwrap());
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day15();
+let _ = day17();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
