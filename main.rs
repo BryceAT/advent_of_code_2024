@@ -1030,8 +1030,33 @@ fn day18() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}",text.split('\n').skip(l-1).next().unwrap());
     Ok(())
 }
+fn day19() -> Result<(), Box<dyn Error>> {
+    let text = get_text(19, false, 1)?;
+    let pats: Vec<_> = text.split('\n').next().unwrap().split(", ").collect();
+    let words: Vec<_> = text.split('\n').skip(2).collect();
+    let possible = |w: &str| {
+        let mut dp = vec![0_usize; w.len() + 1];
+        dp[0] = 1;
+        for i in 0..dp.len() - 1 {
+            if dp[i] > 0 {
+                for p in pats.iter() {
+                    if w[i..].starts_with(p) {
+                        match (w.len(),i + p.len()) {
+                            (a,b) if a < b => (),
+                            (_,b) => dp[b] += dp[i],
+                        }
+                    }
+                }
+            }
+        }
+        dp.pop().unwrap()
+    };
+    println!("part 1: {}",words.iter().filter(|w| possible(w) > 0).count());
+    println!("part 2: {}",words.iter().map(|w| possible(w) ).sum::<usize>());
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day17();
+let _ = day19();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
