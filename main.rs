@@ -1055,8 +1055,74 @@ fn day19() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}",words.iter().map(|w| possible(w) ).sum::<usize>());
     Ok(())
 }
+fn day20() -> Result<(), Box<dyn Error>> {
+    let text = get_text(20, false, 1)?;
+    let grid: Vec<_> = text.split('\n').map(|row| row.chars().collect::<Vec<_>>()).collect();
+    let start = {
+        let mut start = (0,0);
+        for i in 0..grid.len() {
+            for j in 0..grid[0].len() {
+                if grid[i][j] == 'S' {start = (i,j);}
+            }
+        }
+        start
+    };
+    let (mut i, mut j) = start.clone();
+    let mut path = Vec::new();
+    path.push(start.clone());
+    'outer: loop {
+        for (x,y) in [(i+1,j),(i.wrapping_sub(1),j),(i,j+1),(i,j.wrapping_sub(1))] {
+            if x < grid.len() && y < grid[0].len() && !path.contains(&(x,y)) && grid[x][y] != '#' {
+                path.push((x,y));
+                match grid[x][y] {
+                    '.' => { (i,j) = (x,y); break;},
+                    'E' => break 'outer,
+                    c => unreachable!("grid should not contain {c}"),
+                }
+            }
+        }
+    }
+    let solution_len = path.len() - 1;
+    println!("no cheating needs {solution_len}");
+    let dist:HashMap::<(usize,usize),usize> = path.iter().rev().enumerate().map(|(i,p)| (p.clone(),i)).collect();
+    let mut path_lens = HashMap::new();
+    for (step,(i,j)) in path.iter().cloned().enumerate() {
+        for p in [(i+2,j),(i.wrapping_sub(2),j),(i,j+2),(i,j.wrapping_sub(2))] {
+            if let Some(&d) = dist.get(&p) {
+                if d + step + 2 < solution_len {
+                    path_lens.entry(d + step + 2).and_modify(|ct| *ct += 1).or_insert(1);
+                }
+            }
+        }
+    }
+    println!("part 1: {}", path_lens.iter().filter_map(|(d,ct)| if *d +100 <= solution_len {Some(ct)} else {None}).sum::<usize>());
+    path_lens.clear();
+    for (step,(i,j)) in path.iter().cloned().enumerate() {
+        for cheat_x in -20 ..= 20_i32 {
+            for cheat_y in -20 ..= 20_i32 {
+                if cheat_x.abs() + cheat_y.abs() <= 20 {
+                    if let Ok(x) = usize::try_from(i as i32 + cheat_x) {
+                        if let Ok(y) = usize::try_from(j as i32 + cheat_y) {
+                            let p = (x,y);
+                            if let Some(&d) = dist.get(&p) {
+                                let new_len = d + step + cheat_x.abs() as usize + cheat_y.abs() as usize;
+                                if new_len + 100 <= solution_len {
+                                    path_lens.entry(new_len).and_modify(|ct| *ct += 1).or_insert(1);
+                                }
+                            }
+                        }
+                    }
+                    
+                }
+            }
+        }
+        
+    }
+    println!("part 2: {}", path_lens.iter().filter_map(|(d,ct)| if *d +100 <= solution_len {Some(ct)} else {None}).sum::<usize>());
+    Ok(())
+}
 fn main() {
 let now = Instant::now();
-let _ = day19();
+let _ = day20();
 println!("Elapsed: {:.2?}", now.elapsed());
 }
