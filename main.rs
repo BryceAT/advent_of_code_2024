@@ -1121,8 +1121,104 @@ fn day20() -> Result<(), Box<dyn Error>> {
     println!("part 2: {}", path_lens.iter().filter_map(|(d,ct)| if *d +100 <= solution_len {Some(ct)} else {None}).sum::<usize>());
     Ok(())
 }
+fn day22() -> Result<(), Box<dyn Error>> {
+    let text = get_text(22, false, 6)?;
+    let list:Vec<_> = text.split('\n').filter_map(|line| line.parse::<i64>().ok()).collect();
+    fn step(mut num: i64) -> i64 {
+        let mix = |a,b| a^b;
+        let prune = |x| x % 16777216;
+        num = mix(num, num * 64);
+        num = prune(num);
+
+        num = mix(num, num / 32);
+        num = prune(num);
+
+        num = mix(num, num * 2048);
+        prune(num)
+    }
+    println!("part 1: {}", list.iter().cloned().map(|mut num| {for _ in 0..2000 {num = step(num)} num}).sum::<i64>());
+    fn mem_sell(num: i64, a: i64, b: i64, c: i64, d: i64, sell_mem: &mut HashMap<i64,HashMap<[i64;4],i64>>) -> i64 {
+        if let Some(ans) = sell_mem.get(&num) {return *ans.get(&[a,b,c,d]).unwrap_or(&0)}
+        let nums = (1..2_000).fold((vec![num],num),|(mut v, mut n),_| {n = step(n); v.push(n); (v,n)}).0;
+        let diffs: Vec<i64> = iter::once(nums[0]%10).chain(nums.iter().zip(nums.iter().skip(1)).map(|(a,b)| b%10 - a%10)).collect();
+        let mut ans:HashMap<[i64;4],i64> = HashMap::new();
+        for (i,w) in diffs.windows(4).enumerate() {
+            ans.entry([w[0],w[1],w[2],w[3]]).or_insert(nums[i+3] % 10);
+        }
+        sell_mem.insert(num,ans);
+        mem_sell(num,a,b,c,d,sell_mem)
+    }
+    let mut sell_mem = HashMap::new();
+    
+    let mut best = 0;
+    for a in -9..=9 {
+        for b in -9..=9 {
+            for c in -9..=9 {
+                for d in -9..=9 {
+                    best = best.max(list.iter().cloned().map(|num| mem_sell(num,a,b,c,d, &mut sell_mem)).sum::<i64>())
+                }
+            }
+        }
+    }
+    println!("part 2: {}", best);
+    
+    Ok(())
+}
+fn day23() -> Result<(), Box<dyn Error>> {
+    let text = get_text(23, false, 1)?;
+    let mut pairs = HashMap::new();
+    for line in text.split('\n') {
+        let p: Vec<_> = line.split('-').collect();
+        pairs.entry(p[0].to_string()).and_modify(|v: &mut Vec<_>| v.push(p[1].to_string())).or_insert(vec![p[1].to_string()]);
+        pairs.entry(p[1].to_string()).and_modify(|v: &mut Vec<_>| v.push(p[0].to_string())).or_insert(vec![p[0].to_string()]);
+    }
+    let mut ans = 0;
+    for (k,v) in pairs.iter() {
+        if k.starts_with("t") {
+            for k2 in v {
+                if k2.starts_with("t") && k > k2 {continue}
+                for k3 in pairs.get(k2).unwrap() {
+                    if k2 < k3 && pairs[k3].contains(k) {
+                        //println!("{k} {k2} {k3}");
+                        ans += 1;
+                    }
+                }
+            }
+        }
+    }
+    println!("part 1 {ans}");
+    let mut keys = HashSet::new();
+    let mut pairs = HashSet::new();
+    for line in text.split('\n') {
+        let p: Vec<_> = line.split('-').map(|x| x.to_string()).collect();
+        for x in p.iter() {
+            keys.insert(x.to_string());
+        }
+        pairs.insert([p[0].clone(),p[1].clone()]);
+        pairs.insert([p[1].clone(),p[0].clone()]);
+    }
+    let mut level: VecDeque<HashSet<String>> = pairs.iter().cloned().map(|p| p.iter().cloned().collect()).collect();
+    let mut seen : HashSet<Vec<String>> = HashSet::new();
+    while let Some(set) = level.pop_front() {
+        for k in keys.iter() {
+            if !set.contains(k) && set.iter().all(|k2| pairs.contains(&[k.to_string(),k2.to_string()])) {
+                let mut temp = set.clone();
+                temp.insert(k.to_string());
+                if seen.insert({let mut v:Vec<String> = temp.iter().cloned().collect(); v.sort_unstable(); v}){
+                    level.push_back(temp);
+                }
+            }
+        }
+        if level.is_empty() {
+            let mut v = set.into_iter().collect::<Vec<_>>();
+            v.sort();
+            println!("{}",v.join(",") );
+        }
+    }
+    Ok(())
+}
 fn main() {
-let now = Instant::now();
-let _ = day20();
-println!("Elapsed: {:.2?}", now.elapsed());
+    let now = Instant::now();
+    let _ = day23();
+    println!("Elapsed: {:.2?}", now.elapsed());
 }
